@@ -4,6 +4,10 @@ A father-and-kid lab for getting **Bloons TD 6 mods working on macOS** — and w
 
 > Started by David & Hugh, June 2026. This is an experiment notebook as much as a code repo.
 
+> 🎮 **Is this Hugh, or is it your first time?** Start with **[START-HERE.md](START-HERE.md)** — a
+> friendly, step-by-step guide written for an 11-year-old's first time using the Terminal. This README
+> below is the **grown-up reference** with all the technical detail.
+
 This README is a **complete, from-scratch guide**: everything you need to install, in order, ending
 with our test mod actually running in the game. If you're brand new, just start at
 [Part B: Installation](#part-b-installation-from-a-fresh-mac) and follow it top to bottom.
