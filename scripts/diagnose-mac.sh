@@ -91,26 +91,58 @@ else
   find "$MODS_DIR" -iname '*.dll' 2>/dev/null | sed 's/^/      /'
 fi
 
-# --- 5. The log (the most useful part) ----------------------------------------
-say "MelonLoader log (latest)"
+# --- 5. What's actually inside the MelonLoader folder -------------------------
+# Did launching the game cause MelonLoader to write ANYTHING? If the loader never
+# initializes (the macOS IL2CPP wall), this folder won't have logs at all.
+say "Inside the MelonLoader folder"
 
-LOG="$(find "$BTD6_DIR" "$APP" -iname 'Latest.log' -path '*MelonLoader*' 2>/dev/null | head -n1)"
-[ -z "$LOG" ] && LOG="$(find "$BTD6_DIR" "$APP" -maxdepth 5 -iname 'Latest.log' 2>/dev/null | head -n1)"
-
-if [ -z "$LOG" ]; then
-  warn "No MelonLoader Latest.log found yet. Launch the game once, then re-run this."
+if [ -n "${ML_DIR:-}" ]; then
+  echo "    (files changed in the last day are marked with ⏱ — those are from your last launch)"
+  find "$ML_DIR" -maxdepth 2 \( -type f -o -type d \) 2>/dev/null | sort | while read -r p; do
+    if [ -f "$p" ] && find "$p" -mtime -1 2>/dev/null | grep -q .; then
+      printf "    ⏱ %s\n" "$p"
+    else
+      printf "      %s\n" "$p"
+    fi
+  done
 else
-  ok "Log: $LOG"
-  echo "    --- last 40 lines ---"
-  tail -n 40 "$LOG" | sed 's/^/    /'
+  warn "No MelonLoader folder to inspect (see section above)."
+fi
+
+# --- 6. Any log file, anywhere under the game (the most useful part) ----------
+say "MelonLoader logs"
+
+# Cast a wide net: ANY .log under the game tree (Latest.log, Logs/<timestamp>.log, etc.)
+ALL_LOGS="$(find "$BTD6_DIR" "$APP" -iname '*.log' 2>/dev/null | sort -u)"
+
+if [ -z "$ALL_LOGS" ]; then
+  bad "No log files found anywhere under the game."
   echo
-  if grep -qi 'HelloBTD6' "$LOG"; then
-    ok "Our test mod (HelloBTD6) appears in the log — INJECTION WORKS. 🎉"
+  echo "    This almost always means MelonLoader did NOT start when the game launched."
+  echo "    On macOS that's the known hard part (IL2CPP injection blocked by SIP)."
+  echo "    Next things to try / tell David:"
+  echo "      • Re-run the MelonLoader Installer and re-select Bloons TD 6, then launch again."
+  echo "      • In Steam, check if BTD6 needs a Launch Option to load MelonLoader."
+  echo "      • If it still writes no log, this is the macOS wall — see README 'Part F'."
+else
+  echo "    Found these log file(s):"
+  echo "$ALL_LOGS" | sed 's/^/      /'
+  # Newest log wins.
+  LOG="$(printf '%s\n' "$ALL_LOGS" | tr '\n' '\0' | xargs -0 ls -t 2>/dev/null | head -n1)"
+  echo
+  ok "Newest log: $LOG"
+  echo "    --- last 50 lines ---"
+  tail -n 50 "$LOG" | sed 's/^/    /'
+  echo
+  if printf '%s\n' "$ALL_LOGS" | xargs grep -li 'HelloBTD6' 2>/dev/null | grep -q .; then
+    ok "Our test mod (HelloBTD6) appears in a log — INJECTION WORKS. 🎉"
+  else
+    warn "HelloBTD6 not mentioned in any log yet — skim the lines above for clues."
   fi
-  if grep -qiE 'error|exception|failed' "$LOG"; then
-    warn "Log contains errors/exceptions — skim them above; that's our clue."
+  if printf '%s\n' "$ALL_LOGS" | xargs grep -liE 'error|exception|failed' 2>/dev/null | grep -q .; then
+    warn "Some log contains errors/exceptions — those are our best clues."
   fi
 fi
 
 say "Done"
-echo "Paste the log output into JOURNAL.md so we have a record of this run."
+echo "Copy this whole window and paste it to David — that's how we figure out the next step."
