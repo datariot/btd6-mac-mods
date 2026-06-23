@@ -16,8 +16,9 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <AssemblyName>HelloBTD6</AssemblyName>
-    <!-- We supply our own references; don't pull in the whole framework. -->
-    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <!-- We DO need the base .NET framework (System.String, System.Void, etc.); the SDK
+         pulls in the net6.0 reference assemblies automatically. We only ADD the
+         MelonLoader + UnityEngine references on top, below. -->
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
