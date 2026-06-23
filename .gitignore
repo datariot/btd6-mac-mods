@@ -1,0 +1,16 @@
+# .NET build output
+bin/
+obj/
+*.user
+
+# Logs we copy off the Mac for inspection
+logs/
+*.log
+
+# macOS
+.DS_Store
+
+# Editors
+.vs/
+.vscode/
+.idea/
