@@ -11,12 +11,14 @@ namespace HelloBTD6
     /// The smallest possible MelonLoader mod. It does NOT touch the game at all —
     /// its only job is to prove that MelonLoader can inject and run our code on macOS.
     ///
-    /// If you see the "Hello from Hugh's mod!" lines in the MelonLoader log,
-    /// injection works and we can move on to real mods.
+    /// On purpose it depends on NOTHING except MelonLoader itself (no UnityEngine),
+    /// so the build can't fail on game-specific reference paths. If you see the
+    /// "Hello from Hugh's mod!" lines in the MelonLoader log, injection works and
+    /// we can move on to real mods.
     /// </summary>
     public class HelloMod : MelonMod
     {
-        private float _timer;
+        private int _frames;
 
         // Called once, right after MelonLoader loads this mod.
         public override void OnInitializeMelon()
@@ -25,14 +27,14 @@ namespace HelloBTD6
             LoggerInstance.Msg("If you can read this in the log, macOS modding is GO.");
         }
 
-        // Called every frame. We throttle to once every ~5 seconds so the log
-        // shows a steady heartbeat without spamming.
+        // Called every frame. Games run ~60 frames per second, so logging once every
+        // ~300 frames gives us a heartbeat roughly every 5 seconds without spamming.
+        // (We count frames instead of using UnityEngine's timer, so this mod needs no
+        //  game references to build.)
         public override void OnUpdate()
         {
-            _timer += UnityEngine.Time.deltaTime;
-            if (_timer >= 5f)
+            if (++_frames % 300 == 0)
             {
-                _timer = 0f;
                 LoggerInstance.Msg("[HelloBTD6] still alive — heartbeat");
             }
         }

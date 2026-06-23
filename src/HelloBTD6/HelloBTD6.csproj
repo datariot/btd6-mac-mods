@@ -34,20 +34,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The ONLY reference our smoke-test mod needs: MelonLoader itself.
+         (We deliberately avoid UnityEngine so the build can't fail on game-specific
+          interop assembly paths. Real gameplay mods will add UnityEngine / Il2Cpp
+          references later, once injection is proven.) -->
     <Reference Include="MelonLoader">
       <HintPath>$(MelonDir)/net6/MelonLoader.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <!-- UnityEngine: needed for Time.deltaTime in OnUpdate.
-         On IL2CPP games MelonLoader generates interop assemblies; the core
-         UnityEngine.CoreModule lives under the game's managed/interop folder.
-         If this HintPath is wrong, diagnose-mac.sh will help you find the real one. -->
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(MelonDir)/Il2CppAssemblies/UnityEngine.CoreModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>$(MelonDir)/Il2CppAssemblies/UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
