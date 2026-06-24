@@ -231,11 +231,20 @@ Either way, **paste the run into `JOURNAL.md`** so we have a record.
 
 ## Part F: If injection just won't work on Mac
 
-Honest fallbacks, in order of "keeps it on the Mac":
+**This is where we ended up** (June 2026): on Hugh's Intel Mac, native MelonLoader injection produced
+**zero logs** — the IL2CPP/SIP wall, confirmed. So we're taking the reliable workaround.
 
-1. **CrossOver / Wine** — run the **Windows** BTD6 + MelonLoader under a Windows compatibility layer
-   on macOS. Finicky, but it sidesteps the IL2CPP-on-macOS problem entirely. This is how a lot of
-   people actually mod BTD6 on a Mac.
+👉 **Full kid-friendly walkthrough: [PART-F-CROSSOVER.md](PART-F-CROSSOVER.md)**
+
+The options, in order of "most likely to work":
+
+1. **CrossOver (a "bottle")** ✅ *our chosen route* — run the **Windows** BTD6 + Windows MelonLoader
+   inside a Wine-based compatibility layer. On Windows the loader works the easy way, so mods (and
+   our own `HelloBTD6.dll`) just work. No SIP, no re-buying the game.
+   - **This Mac is Intel + macOS 15.7.7**, so use **CrossOver 26** (free 14-day trial; needs 10.15+).
+     CrossOver **27 drops Intel**, so stay on 26.
+   - **Whisky is ruled out**: never supported Intel, and discontinued April 2025.
+   - **Free alternative:** **Sikarugir** (formerly Kegworks/Wineskin) — more tinkering, no cost.
 2. **A spare/cloud Windows PC** — least fun, most reliable.
 3. **Contribute upstream** — the IL2CPP-on-macOS work in MelonLoader is active. A clean BTD6 repro +
    log is genuinely useful to that project, and is a great "we found a real bug" lesson for Hugh.
