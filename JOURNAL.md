@@ -12,7 +12,22 @@ Template:
 
 ---
 
-## 2026-06-23 — native macOS modding confirmed dead → going CrossOver
+## 2026-06-23 (evening) — FALSE ALARM: native modding is likely fine, just needs the launch wrapper
+- Found `melonloader-launch.sh` + `MelonLoader.Bootstrap.dylib` already installed in the BTD6 folder.
+  The script's own docs explain it: macOS LaunchServices doesn't pass DYLD_INSERT_LIBRARIES when Steam
+  starts a .app, so MelonLoader never injected — NOT because injection is impossible, but because we
+  launched the game the normal way. The earlier "no logs" was this, not a hard wall.
+- **The fix:** set BTD6's Steam Launch Options to (absolute path required):
+    "/Users/hugh/Library/Application Support/Steam/steamapps/common/BloonsTD6/melonloader-launch.sh" %command%
+  Generate the exact line on Hugh's Mac with:
+    echo "\"$HOME/Library/Application Support/Steam/steamapps/common/BloonsTD6/melonloader-launch.sh\" %command%"
+- First try gave "OS error 260" = macOS "file not found" = the launch-options path was wrong. Just a
+  typo'd path, no deeper issue. Retry with the exact generated line.
+- Status: CrossOver (PART-F-CROSSOVER.md) is now PLAN B, not Plan A. Try the native launch option first.
+- Next (when rested): paste exact launch-option line into Steam → Play → diagnose-mac.sh, look for
+  "Hello from Hugh's mod!".
+
+## 2026-06-23 — [SUPERSEDED, see entry above] thought native modding was dead → CrossOver
 - Tried: Built HelloBTD6 (after fixing the .csproj framework + UnityEngine ref bugs), installed it via
   build-and-install.sh, launched BTD6, ran diagnose-mac.sh.
 - Result: **No MelonLoader logs anywhere, nothing touched in the MelonLoader folder.** The loader is
