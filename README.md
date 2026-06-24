@@ -231,13 +231,15 @@ Either way, **paste the run into `JOURNAL.md`** so we have a record.
 
 ## Part F: If injection just won't work on Mac
 
-> ⚠️ **Update (2026-06-23 evening): this is now PLAN B.** We discovered native modding likely works
-> after all — MelonLoader was installed fine; we just hadn't told Steam to launch the game through the
-> `melonloader-launch.sh` wrapper (set it in BTD6's Steam **Launch Options** as an absolute path +
-> `%command%`). The earlier "zero logs" was a launch problem, not the IL2CPP/SIP wall. **Try the native
-> launch option first** (see JOURNAL.md); use CrossOver below only if that doesn't pan out.
+> ⚠️ **Update (2026-06-23): native modding got CLOSE but hit a real wall — use CrossOver.**
+> With the `melonloader-launch.sh` wrapper set as BTD6's Steam Launch Option (absolute path +
+> `%command%`), MelonLoader **does inject and run natively** — but it then **crashes generating the
+> IL2CPP interop assemblies** (`Il2CppInterop` `XrefScannerLowLevel` → `ArgumentOutOfRangeException`).
+> That interop layer is what every real mod needs, and Il2CppInterop's maintainers state it "can't work
+> well on macOS" (no runtime API for the dylib base address). So: native **injection ✅**, native
+> **interop ❌**. CrossOver is the path for actual mods. (See JOURNAL.md for the full debugging arc.)
 
-If the native route fails, the reliable workaround:
+The reliable workaround:
 
 👉 **Full kid-friendly walkthrough: [PART-F-CROSSOVER.md](PART-F-CROSSOVER.md)**
 

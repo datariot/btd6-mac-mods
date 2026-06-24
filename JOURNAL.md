@@ -12,7 +12,22 @@ Template:
 
 ---
 
-## 2026-06-23 (evening) — FALSE ALARM: native modding is likely fine, just needs the launch wrapper
+## 2026-06-23 (night) — native INJECTION works; native INTEROP generation is the real wall → CrossOver
+- Set the Steam launch option correctly → MelonLoader now injects and runs natively. Logs appear in
+  `MelonLoader/Logs/`. Confirmed: the loader works on this Mac. 🎉
+- New (deeper) error: `Il2CppAssemblyGenerator` → `Il2CppInterop` `Pass16ScanMethodRefs` throws
+  `ArgumentOutOfRangeException` in `XrefScannerLowLevel.ExtractTargetAddress` while disassembling
+  GameAssembly. Interop assembly generation fails.
+- Why it's a REAL wall this time (unlike the launch-method false alarm): Il2CppInterop maintainers say
+  macOS lacks the runtime APIs it needs (no way to get the dylib base address; no /proc/self/maps;
+  GetCurrentProcess().Modules excludes the dylib) → "Il2CppInterop can't work well on macOS." Plus
+  MelonLoader PR #900: IL2CPP on macOS is "very flaky" (LLVM inlining of GameAssembly).
+- Consequence: injection ✅ but interop ❌ → mods that touch game code (BTD Mod Helper + all real mods)
+  can't load. HelloBTD6 (needs no interop) might limp through but that isn't the goal.
+- **Verdict: native modding is NOT viable for real mods on this Mac. Plan B = CrossOver
+  (PART-F-CROSSOVER.md).** (CrossOver runs the Windows GameAssembly.dll, which Il2CppInterop scans fine.)
+
+## 2026-06-23 (evening) — [SUPERSEDED by night entry] thought native was fine after the launch-wrapper fix
 - Found `melonloader-launch.sh` + `MelonLoader.Bootstrap.dylib` already installed in the BTD6 folder.
   The script's own docs explain it: macOS LaunchServices doesn't pass DYLD_INSERT_LIBRARIES when Steam
   starts a .app, so MelonLoader never injected — NOT because injection is impossible, but because we
