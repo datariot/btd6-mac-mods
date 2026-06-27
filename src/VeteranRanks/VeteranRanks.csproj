@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Veteran Ranks — gives you 999 veteran ranks (the prestige track past max rank).
+    A bare MelonMod (no Mod Helper, no class injection): once your profile is loaded
+    it writes the profile's own veteran XP and veteran rank through Il2Cpp interop.
+    We set BOTH veteranXp (= 999 * xpNeededPerVeteranRank) and veteranRank (= 999)
+    so they stay consistent and the game won't recompute them away. One-time, not
+    per round. Persistent / server-synced.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>VeteranRanks</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameRoot Condition="'$(GameRoot)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/BloonsTD6</GameRoot>
+    <Net6>$(GameRoot)/MelonLoader/net6</Net6>
+    <Interop>$(GameRoot)/MelonLoader/Il2CppAssemblies</Interop>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(Net6)/MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(Net6)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Interop)/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Interop)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Interop)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- Btd6Player inherits Player<ProfileModel> (the .Data accessor) from LiNK.Client. -->
+    <Reference Include="Il2CppNinjaKiwi.LiNK.Client"><HintPath>$(Interop)/Il2CppNinjaKiwi.LiNK.Client.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppNinjaKiwi.Common"><HintPath>$(Interop)/Il2CppNinjaKiwi.Common.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>
