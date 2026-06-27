@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Game Speed — press a number key to pick how fast the game runs, so you can
+    blast through rounds. A bare MelonMod (no Mod Helper, no class injection): it
+    reads the keyboard and sets BTD6's own fast-forward speed through Il2Cpp
+    interop, the same way Mega Cash sets your cash.
+
+      1 = normal (1x)   2 = 2x   3 = 3x   4 = 5x   5 = 10x
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>GameSpeed</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameRoot Condition="'$(GameRoot)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/BloonsTD6</GameRoot>
+    <Net6>$(GameRoot)/MelonLoader/net6</Net6>
+    <Interop>$(GameRoot)/MelonLoader/Il2CppAssemblies</Interop>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(Net6)/MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(Net6)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Interop)/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Interop)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Interop)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- UnityEngine.Input (GetKeyDown) lives in the legacy input module. -->
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(Interop)/UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>
