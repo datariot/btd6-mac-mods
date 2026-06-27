@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Ranks And Knowledge Per Round — every time you reach a new round you gain 100
+    account ranks and 100 Monkey Knowledge points. A bare MelonMod (no Mod Helper,
+    no class injection): it watches the round counter and writes the player's own
+    rank (Btd6Player.SetRank) and Monkey Knowledge (ProfileModel.KnowledgePoints)
+    through Il2Cpp interop, like Levels Per Round. Both are persistent / server-synced.
+    (Account rank is capped by the game at its maximum; Monkey Knowledge is not.)
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>RanksAndKnowledgePerRound</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameRoot Condition="'$(GameRoot)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/BloonsTD6</GameRoot>
+    <Net6>$(GameRoot)/MelonLoader/net6</Net6>
+    <Interop>$(GameRoot)/MelonLoader/Il2CppAssemblies</Interop>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(Net6)/MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(Net6)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Interop)/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Interop)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Interop)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- Btd6Player inherits Player<ProfileModel> (the .Data accessor) from LiNK.Client. -->
+    <Reference Include="Il2CppNinjaKiwi.LiNK.Client"><HintPath>$(Interop)/Il2CppNinjaKiwi.LiNK.Client.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppNinjaKiwi.Common"><HintPath>$(Interop)/Il2CppNinjaKiwi.Common.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>
