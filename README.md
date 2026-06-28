@@ -41,9 +41,11 @@ with our test mod actually running in the game. If you're brand new, just start 
 > a pile of them work: Mega Cash, Game Speed, Unlimited Upgrades, Monkey Money / Trophies, account
 > rank & Monkey Knowledge, unlock-all-towers/heroes/skins. See **[Mods included](#mods-included)**.
 >
-> ⚠️ **Sharing caveat:** cloning this repo gives you the mod *source*. To actually run them on another
-> Apple Silicon Mac you also need the patched MelonLoader runtime from `macos-il2cpp-port` — that part
-> isn't packaged here yet. The historical narrative below is kept for context.
+> 📦 **Running on another Apple Silicon Mac?** You need the patched MelonLoader runtime (a stock
+> install won't work on arm64). It's packaged as a one-step download:
+> **[Releases → Native arm64 MelonLoader runtime](https://github.com/datariot/btd6-mac-mods/releases/tag/arm64-runtime-v1)**
+> — download the tarball, extract, run `./install-runtime.sh`, then build the mods with
+> `./scripts/build-and-install.sh`. The historical narrative below is kept for context.
 
 Most people say "BTD6 mods don't work on Mac." That's *almost* right, but the reason matters because
 it tells us where to spend effort.
