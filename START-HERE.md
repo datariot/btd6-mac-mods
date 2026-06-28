@@ -17,8 +17,8 @@ We'll go one small mission at a time. Take your time. 🐢
 - **Terminal** — a window where you *type* commands to the computer instead of clicking. It looks
   plain and a little spooky, but it's just a place to talk to the Mac with words.
 - **Command** — one line you type (or paste) and then press **Return** to run.
-- **Mod** — your add-on for the game. Yours is named **HelloBTD6**. Right now it just makes the game
-  say "Hello from Hugh's mod!" in a secret log file. That's our test to prove it works!
+- **Mod** — an add-on for the game. This project has a bunch! The first one you'll see is **Mega
+  Cash**, which keeps your money maxed out so you can buy any tower you want. 💰
 
 ---
 
@@ -109,10 +109,10 @@ looking to see lots of green ✓ marks. If you see scary red ✗ marks, take a s
 
 ---
 
-## Mission 4 — Build your mod and put it in the game
+## Mission 4 — Build the mods and put them in the game
 
-This is the big one! This command turns your code into the mod and slips it into the game. One command
-does it all.
+This is the big one! This command turns all the code into mods and slips them into the game. One command
+builds **every** mod and installs them.
 
 **Type this and press Return:**
 
@@ -123,7 +123,7 @@ does it all.
 It will think for a bit (building takes a little time the first time — be patient ⏳), then print:
 
 ```
-🎉 ALL DONE!
+🎉 ALL DONE! Installed N mods.
 ```
 
 If it says ❌ anywhere, don't worry — show David the window.
@@ -135,32 +135,31 @@ If it says ❌ anywhere, don't worry — show David the window.
 ## Mission 5 — Play the game (this is the test!)
 
 1. Open **Bloons TD 6** like you normally would.
-2. When you get to the main menu, **just wait about 15 seconds.** (Your mod is quietly saying hello in
-   the background!)
-3. **Quit the game.**
+2. **Start a game** on any map.
+3. Look at your **money** (top-left). With **Mega Cash** running, it stays maxed out — you can buy
+   any tower you want, right away! 💰
 
-☐ *Done when: you opened the game, waited, and quit.*
+☐ *Done when: you started a game and saw tons of money.*
 
 ---
 
 ## Mission 6 — Did it work?! 🥁
 
-Back in the Terminal, run the look-around helper one more time:
+- **You had a giant pile of money the whole game** → YOU DID IT. You built mods and made them run
+  inside a real game. That is genuinely awesome. 🏆 Go tell David!
+- **Money looked normal (not maxed)** → that's okay! Run the look-around helper and show David what it
+  says:
+  ```bash
+  ./scripts/diagnose-mac.sh
+  ```
 
-```bash
-./scripts/diagnose-mac.sh
-```
+**Try the other mods too!** While you're in a game:
 
-Scroll up through what it prints and look for this line:
+- **Game Speed** — press **1, 2, 3, 4, 5** to make the game go faster (5 = super fast! ⚡)
+- **Unlimited Upgrades** — every monkey can max all **three** upgrade paths
+- **Ability Monkey** — press the **`** key (top-left, under Esc) for a special panel
 
-> ✓ Our test mod (HelloBTD6) appears in the log — INJECTION WORKS. 🎉
-
-- **If you see that** → YOU DID IT. You wrote code and made it run inside a real game. That is genuinely
-  awesome. 🏆 Go tell David!
-- **If you don't see it** → that's okay! This part is famously hard on Mac computers (even experts
-  struggle with it). It's not your fault. Show David and you two can figure out the next step together.
-
-☐ *Done when: you checked the log (either way, you finished — great job!).*
+☐ *Done when: you tried Mega Cash (and maybe a few others — great job!).*
 
 ---
 

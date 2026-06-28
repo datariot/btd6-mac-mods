@@ -18,7 +18,8 @@ with our test mod actually running in the game. If you're brand new, just start 
 
 - [Part A: The honest situation](#part-a-the-honest-situation-read-this-first) — *what we're doing and why*
 - [Part B: Installation (from a fresh Mac)](#part-b-installation-from-a-fresh-mac) — *every prerequisite, in order*
-- [Part C: Build & run our mod](#part-c-build--run-our-mod)
+- [Part C: Build & run the mods](#part-c-build--run-the-mods)
+- [Mods included](#mods-included) — *what each mod does*
 - [Part D: Reading the result](#part-d-reading-the-result)
 - [Part E: Troubleshooting](#part-e-troubleshooting)
 - [Part F: If injection just won't work](#part-f-if-injection-just-wont-work-on-mac)
@@ -27,6 +28,22 @@ with our test mod actually running in the game. If you're brand new, just start 
 ---
 
 ## Part A: The honest situation (read this first)
+
+> ## ✅ Update (2026-06-26): native modding WORKS on Apple Silicon.
+> The earlier conclusion below ("native interop fails → use CrossOver") has been **superseded**. On an
+> Apple Silicon Mac (M1–M4), BTD6 mods now run **natively, no CrossOver, no Rosetta**. The fix was
+> making MelonLoader's `Il2CppInterop` arm64-aware (the `XrefScannerLowLevel` crash, the icall
+> injector, and several hooks). That work lives in a **separate repo, `macos-il2cpp-port`** — it patches
+> MelonLoader's runtime. **You need that patched runtime to run these mods**; a stock MelonLoader
+> install (Part B4) is *not* enough on arm64.
+>
+> The mods in this repo are "bare" MelonMods (they call the game's own methods; no class injection), and
+> a pile of them work: Mega Cash, Game Speed, Unlimited Upgrades, Monkey Money / Trophies, account
+> rank & Monkey Knowledge, unlock-all-towers/heroes/skins. See **[Mods included](#mods-included)**.
+>
+> ⚠️ **Sharing caveat:** cloning this repo gives you the mod *source*. To actually run them on another
+> Apple Silicon Mac you also need the patched MelonLoader runtime from `macos-il2cpp-port` — that part
+> isn't packaged here yet. The historical narrative below is kept for context.
 
 Most people say "BTD6 mods don't work on Mac." That's *almost* right, but the reason matters because
 it tells us where to spend effort.
@@ -157,60 +174,70 @@ cd btd6-mac-mods
 
 ---
 
-## Part C: Build & run our mod
+## Part C: Build & run the mods
 
-`HelloBTD6` is the smallest possible MelonLoader mod. It does **not** change the game — it only logs a
-line, so we can confirm injection works on this Mac.
+> Requires the patched MelonLoader runtime on this Mac (see the Part A update). The csprojs reference
+> the game's `MelonLoader/net6` and `MelonLoader/Il2CppAssemblies` DLLs, which exist once MelonLoader is
+> installed.
 
 ### C1. Inspect the install (also finds the paths the build needs)
 
 ```bash
 ./scripts/diagnose-mac.sh
 ```
-This finds BTD6, confirms it's IL2CPP, prints the **MelonLoader dir**, the **Mods dir**, and tails the
-log. Note the MelonLoader path — you may need it in the next step.
+This finds BTD6, confirms it's IL2CPP, prints the **MelonLoader dir** and the **Mods dir**, and tails
+the log.
 
-### C2. Build the mod
+### C2. Build & install every mod (one command)
 
 ```bash
-cd src/HelloBTD6
-dotnet build -c Release
+./scripts/build-and-install.sh
 ```
-Output: `bin/Release/HelloBTD6.dll`.
-
-If the build fails on a missing reference, the paths in `HelloBTD6.csproj` don't match this Mac.
-Override them without editing the file (use the `MelonLoader dir` from C1):
+This builds each mod in `src/` and copies the `.dll`s into the game's `Mods/` folder (clearing the
+macOS quarantine flag for you). To build a single mod by hand instead:
 ```bash
-dotnet build -c Release -p:MelonDir="/Users/<you>/Library/Application Support/Steam/steamapps/common/BloonsTD6/MelonLoader"
+dotnet build -c Release src/MegaCash/MegaCash.csproj -o src/MegaCash/bin
+cp src/MegaCash/bin/MegaCash.dll "$HOME/Library/Application Support/Steam/steamapps/common/BloonsTD6/Mods/"
 ```
 
-### C3. Install the mod into the game
+### C3. Run
 
-Copy the built `.dll` into the `Mods/` folder that `diagnose-mac.sh` reported, e.g.:
-```bash
-cp bin/Release/HelloBTD6.dll "$HOME/Library/Application Support/Steam/steamapps/common/BloonsTD6/Mods/"
-```
-If macOS quarantines the fresh file:
-```bash
-xattr -dr com.apple.quarantine "$HOME/Library/Application Support/Steam/steamapps/common/BloonsTD6/Mods/HelloBTD6.dll"
-```
+Launch BTD6 and **start a game**. With **Mega Cash** installed your money stays maxed — buy anything.
 
-### C4. Run
+---
 
-Launch BTD6, sit on the main menu ~15 seconds, then quit.
+## Mods included
+
+All are **bare MelonMods** (no Mod Helper, no class injection): they call the game's own methods.
+
+| Mod | What it does |
+|-----|-------------|
+| **MegaCash** | Keeps your in-game cash topped up every round |
+| **GameSpeed** | Press number keys **1–5** for 1× / 2× / 3× / 5× / 10× speed |
+| **UnlimitedUpgrades** | Every monkey can max all 3 upgrade paths (5-5-5), no crosspath limit |
+| **UnlockAllUpgrades** | Flips the game's "all upgrades available" flag (no XP grind) |
+| **MonkeyMoneyPerRound** | Earn Monkey Money equal to each round you reach |
+| **MonkeyMoneyGift** | One-time +999,999,999 Monkey Money |
+| **VeteranRanks** | One-time 999 veteran ranks |
+| **RanksAndKnowledgePerRound** | +100 Monkey Knowledge and +100 ranks each round (rank caps at the game max) |
+| **EveryMonkey** | Unlock all towers + every hero |
+| **EveryHeroAndSkins** | Unlock every hero and all their skins |
+| **AbilityMonkey** | On-screen panel (toggle with **`**) to fire every ability / no cooldowns |
+
+> Most are persistent / account-level cheats (Monkey Money, trophies, ranks, unlocks are server-synced).
+> These are for messing around on your own account — don't use them where a modded balance would matter.
 
 ---
 
 ## Part D: Reading the result
 
 ```bash
-./scripts/diagnose-mac.sh   # it tails the log and searches it for "HelloBTD6"
+./scripts/diagnose-mac.sh   # tails the log and looks for our mods loading
 ```
 
-- ✅ You see `Hello from Hugh's mod! Injection works.` and `heartbeat` lines →
-  **macOS modding is viable.** Next: try BTD Mod Helper + a real mod.
-- ❌ No HelloBTD6 lines, or the log shows IL2CPP / injection errors → injection is the wall. Copy the
-  errors into `JOURNAL.md` and go to [Part F](#part-f-if-injection-just-wont-work-on-mac).
+- ✅ You see lines like `Mega Cash is ON …` and the mods' messages → they're loading and running.
+- ❌ No mod lines, or the log shows IL2CPP / injection errors → the patched runtime isn't in place
+  (see the Part A update) or injection failed. Copy the errors into `JOURNAL.md`.
 
 Either way, **paste the run into `JOURNAL.md`** so we have a record.
 
@@ -221,7 +248,7 @@ Either way, **paste the run into `JOURNAL.md`** so we have a record.
 | Symptom | Fix |
 |---------|-----|
 | `dotnet: command not found` | B5 not done, or restart the terminal so PATH updates. |
-| Build error: can't find `MelonLoader.dll` / `UnityEngine.*` | HintPaths differ by MelonLoader version (`net6/` vs `Managed/`, IL2CPP interop under `Il2CppAssemblies/`). Fix the path in `HelloBTD6.csproj` or pass `-p:MelonDir=...`. |
+| Build error: can't find `MelonLoader.dll` / `UnityEngine.*` | HintPaths differ by MelonLoader version (`net6/` vs `Managed/`, IL2CPP interop under `Il2CppAssemblies/`). Fix `<GameRoot>` in the mod's `.csproj` or pass `-p:GameRoot=...`. |
 | Mod builds but never appears in the log | Confirm the `.dll` is in the **right** `Mods/` folder (diagnose-mac.sh prints it); clear quarantine (C3); make sure you launched the game *after* copying. |
 | Log: wrong/missing **.NET runtime** | Install the .NET 6 runtime (see B5 note). |
 | Log: IL2CPP errors / SIP / nothing injects | Expected failure mode on macOS IL2CPP. This is the real wall → [Part F](#part-f-if-injection-just-wont-work-on-mac). |
@@ -265,14 +292,17 @@ Record what we try in `JOURNAL.md`.
 ```
 btd6-mac-mods/
 ├── README.md            ← you are here (full install + run guide)
+├── START-HERE.md        ← kid-friendly first-time walkthrough
 ├── JOURNAL.md           ← lab notebook: what we tried, what happened
+├── PART-F-CROSSOVER.md  ← Intel-Mac / CrossOver fallback route
 ├── scripts/
-│   └── diagnose-mac.sh  ← run on Hugh's Mac to inspect the install + logs
-└── src/
-    └── HelloBTD6/       ← minimal injection-test mod
-        ├── README.md    ← mod-specific build notes
-        ├── HelloBTD6.csproj
-        └── Main.cs
+│   ├── diagnose-mac.sh        ← inspect the install + logs
+│   └── build-and-install.sh   ← build every mod and copy into Mods/
+└── src/                 ← one folder per mod (see "Mods included" above)
+    ├── MegaCash/
+    ├── GameSpeed/
+    ├── UnlimitedUpgrades/
+    └── …  (each has its own .csproj + Main.cs)
 ```
 
 ## Sources / further reading

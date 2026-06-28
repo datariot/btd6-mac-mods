@@ -71,7 +71,7 @@ else
     # Try to read the assembly version cheaply.
     VER="$(strings "$ML_DLL" 2>/dev/null | grep -Eo '0\.[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)"
     [ -n "$VER" ] && ok "Reported version-ish string: $VER"
-    echo "    -> Set MELONLOADER_DLL in HelloBTD6.csproj to this path when building."
+    echo "    -> The mod .csproj files point at this path when building."
   else
     warn "MelonLoader dir exists but MelonLoader.dll not found inside it."
   fi
@@ -85,7 +85,7 @@ if [ -z "$MODS_DIR" ]; then
   warn "No Mods/ folder yet (MelonLoader usually creates it on first launch)."
 else
   ok "Mods dir: $MODS_DIR"
-  echo "    Drop HelloBTD6.dll here to test, then launch the game."
+  echo "    Mod .dll files go here (build-and-install.sh puts them here for you)."
   COUNT="$(find "$MODS_DIR" -iname '*.dll' 2>/dev/null | wc -l | tr -d ' ')"
   ok "Currently $COUNT .dll(s) in Mods/"
   find "$MODS_DIR" -iname '*.dll' 2>/dev/null | sed 's/^/      /'
@@ -134,10 +134,10 @@ else
   echo "    --- last 50 lines ---"
   tail -n 50 "$LOG" | sed 's/^/    /'
   echo
-  if printf '%s\n' "$ALL_LOGS" | xargs grep -li 'HelloBTD6' 2>/dev/null | grep -q .; then
-    ok "Our test mod (HelloBTD6) appears in a log — INJECTION WORKS. 🎉"
+  if printf '%s\n' "$ALL_LOGS" | xargs grep -liE 'Mega Cash|MegaCash|Melon.*is ON' 2>/dev/null | grep -q .; then
+    ok "Our mods appear in a log — they're loading and running. 🎉"
   else
-    warn "HelloBTD6 not mentioned in any log yet — skim the lines above for clues."
+    warn "No mod lines in any log yet — skim the lines above for clues."
   fi
   if printf '%s\n' "$ALL_LOGS" | xargs grep -liE 'error|exception|failed' 2>/dev/null | grep -q .; then
     warn "Some log contains errors/exceptions — those are our best clues."
