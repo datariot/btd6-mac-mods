@@ -49,7 +49,12 @@ namespace EveryMonkey
                             continue;
                         try
                         {
-                            player.UnlockHero(hero.name);
+                            // heroSet entries are named "HeroDetailsModel_Quincy" etc.,
+                            // but UnlockHero wants the plain id "Quincy".
+                            string id = hero.name;
+                            if (id != null && id.StartsWith("HeroDetailsModel_"))
+                                id = id.Substring("HeroDetailsModel_".Length);
+                            player.UnlockHero(id);
                             heroes++;
                         }
                         catch { /* this hero can't be unlocked right now */ }
