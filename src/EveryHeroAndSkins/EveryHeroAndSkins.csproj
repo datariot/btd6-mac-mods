@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Every Hero And Skins — unlocks every hero AND all of their skins. A bare MelonMod
+    (no Mod Helper, no class injection): once your profile loads it walks the game
+    model's heroSet, calls Btd6Player.UnlockHero for each hero, then walks that hero's
+    skins (SkinManager.GetAllSkins) and calls UnlockHeroSkin for each. Runs once.
+    Hero/skin unlocks are persistent / server-synced.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>EveryHeroAndSkins</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameRoot Condition="'$(GameRoot)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/BloonsTD6</GameRoot>
+    <Net6>$(GameRoot)/MelonLoader/net6</Net6>
+    <Interop>$(GameRoot)/MelonLoader/Il2CppAssemblies</Interop>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(Net6)/MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(Net6)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Interop)/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <!-- Il2Cpp HashSet<> (unlockedHeroes / unlockedTowerSkins) lives here. -->
+    <Reference Include="Il2CppSystem.Core"><HintPath>$(Interop)/Il2CppSystem.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Interop)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Interop)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- Btd6Player inherits from a generic Player<> defined in the LiNK client assembly. -->
+    <Reference Include="Il2CppNinjaKiwi.LiNK.Client"><HintPath>$(Interop)/Il2CppNinjaKiwi.LiNK.Client.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppNinjaKiwi.Common"><HintPath>$(Interop)/Il2CppNinjaKiwi.Common.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>
