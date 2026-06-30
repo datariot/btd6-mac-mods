@@ -55,6 +55,34 @@ Install any community mod with:  `tools/install-community-mod.sh <owner/repo>`
 DLL, converts to AnyCPU, installs to the Mods folder. Only pure-IL mods convert; mixed-mode mods (with
 bundled native Windows code) are refused (would need an arm64 native build).
 
-**Answer to "do community mods work?":** yes, but not as downloaded — they need the one-step AnyCPU
-conversion (no source or rewrite required; pure binary re-mark). The proper root-cause fix would bake
-this conversion into the port's MelonLoader assembly loader so x64 mods load transparently.
+**Answer to "do community mods work?":** yes — and as of the root-cause fix below, **drop-in**.
+
+## Loader-integrated auto-conversion — DONE (2026-06-30)
+The x64→AnyCPU conversion is now **baked into the port's MelonLoader**, so community mods (including ones
+downloaded by Mod Helper's in-game browser) load with **no manual step** and **persist across restarts**.
+
+Patch site: `macos-il2cpp-port/MelonLoader/MelonLoader/Melons/MelonAssembly.cs`,
+`LoadMelonAssembly(string path)`. When `AssemblyLoadContext.Default.LoadFromAssemblyPath` throws (the x64
+rejection), a macOS-only helper `TryConvertWindowsX64ToAnyCpu(path)` re-marks the assembly AnyCPU in place
+via **Mono.Cecil** (`Architecture = I386`, `Attributes = ILOnly`) and the load is retried once. It no-ops
+for already-AnyCPU assemblies and **refuses mixed-mode** (native-code) assemblies, so the fast path and
+non-convertible mods are untouched. Mono.Cecil is already a MelonLoader dependency → zero new packages.
+On success the log shows: `Auto-converted x64 Melon Assembly to AnyCPU for load: <name>.dll`.
+
+Build & deploy the patched loader:
+```
+cd macos-il2cpp-port/MelonLoader
+dotnet build MelonLoader/MelonLoader.csproj -c Release -f net6 \
+  -p:SolutionDir="$PWD/" -p:ForceRID=osx-arm64 -p:Platform=arm64
+cp Output/Release/osx-arm64/MelonLoader/net6/MelonLoader.dll \
+   "$HOME/Library/Application Support/Steam/steamapps/common/BloonsTD6/MelonLoader/net6/MelonLoader.dll"
+```
+Verified: a raw x64 `UsefulUtilities.dll` (PE32+) dropped into `Mods/` auto-converted to PE32 on boot →
+`16 Mods loaded`, zero `FileLoadException`, menu reached.
+
+`tools/anycpu-convert` (offline CLI) and `tools/install-community-mod.sh` remain useful for converting
+without launching the game, but are no longer required for a mod to load.
+
+> Heads-up: once a mod actually loads, **its own** errors can appear — e.g. `StarshipEnterprise` logs
+> `Missing dependency doombubbles/paths-plus-plus`. That's a mod-to-mod dependency (install PathsPlusPlus
+> too), not a port/loader problem.
