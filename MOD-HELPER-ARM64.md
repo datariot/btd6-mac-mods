@@ -39,3 +39,22 @@ detours, so its success is downstream of those fixes.
 `SpriteReference` (and any il2cpp type with custom equality) **NREs on `== null`** — its game-side
 equality dereferences a null field on a fresh instance. Null-check Il2Cpp objects with
 `ReferenceEquals(x, null)` (or `.Pointer == IntPtr.Zero`), never `== null`.
+
+## Community mods (verified 2026-06-29)
+Community Mod Helper mods are **architecture-neutral IL**, but they ship built as **x64 (PE32+ AMD64)**
+— the Mod Helper template's default. This port's loader rejects x64 assemblies with
+`FileLoadException` (coreclr `LoadFromPath`), even though the IL would run fine: a survey of
+doombubbles mods (Unlimited5thTiers, CardMonkey, FasterForward, UsefulUtilities, RetryAnywhere,
+AutoEscape) found **all** x64, all `ILOnly`.
+
+**They are pure IL, so converting to AnyCPU makes them load + run.** Verified: Unlimited5thTiers v1.1.12,
+converted via `tools/anycpu-convert`, loaded and initialized (`14 Mods loaded`, banner printed, no errors).
+
+Install any community mod with:  `tools/install-community-mod.sh <owner/repo>`
+(e.g. `tools/install-community-mod.sh doombubbles/Unlimited5thTiers`) — downloads the latest release
+DLL, converts to AnyCPU, installs to the Mods folder. Only pure-IL mods convert; mixed-mode mods (with
+bundled native Windows code) are refused (would need an arm64 native build).
+
+**Answer to "do community mods work?":** yes, but not as downloaded — they need the one-step AnyCPU
+conversion (no source or rewrite required; pure binary re-mark). The proper root-cause fix would bake
+this conversion into the port's MelonLoader assembly loader so x64 mods load transparently.
