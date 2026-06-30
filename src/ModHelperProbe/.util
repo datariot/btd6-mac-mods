@@ -1,0 +1,9 @@
+Developer utility — NOT installed into the live game by default.
+
+ModHelperProbe is a BloonsTD6Mod diagnostic that self-tests Mod Helper on the
+macOS arm64 port (hooks, model reads, Il2Cpp class injection, textures, sprites,
+in-match tower placement) and logs [PROBE] PASS/FAIL. It injects a magenta
+ProbeTower/ProbeHero/ProbeBloon, so it is not something Hugh wants in his game.
+
+build-and-install.sh skips any mod folder containing this .util marker.
+To build/install it for debugging:  scripts/build-and-install.sh --with-utils
