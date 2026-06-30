@@ -14,3 +14,6 @@ logs/
 .vs/
 .vscode/
 .idea/
+
+# autonomous test harness compiled binary
+test/hidclick
