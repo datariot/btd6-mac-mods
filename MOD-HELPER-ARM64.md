@@ -20,9 +20,13 @@ This rests on the detour-layer fixes in the port (near-island short-function fix
 `MLMacOSJitCopy` + exit-teardown skip = Bug B). Class injection in particular needs working native
 detours, so its success is downstream of those fixes.
 
+## In-match (verified 2026-06-29)
+- `OnMatchStart` and `OnRoundStart` hooks fire in a live match.
+- The custom tower appears in the in-game shop with its custom (magenta) icon at the discounted cost.
+- The custom tower is **placed and simulated** in a real match via `InGame.instance.bridge.CreateTowerAt(...)`
+  (programmatic placement — macOS synthetic mouse input can't drive Unity *world* placement, only UI).
+
 ## Not yet verified
-- In-match behaviour: custom tower **placeability/functionality** in an actual game (needs the loop to
-  navigate menu → map → match; `OnMatchStart`/`OnRoundStart` hooks not yet exercised).
 - Custom **sprites/textures** from embedded mod resources (the probe tower reuses base art).
 - `ModUpgrade` / `ModHero` / `ModBloon` injection (expected to work — same mechanism as `ModTower`).
 

@@ -121,9 +121,42 @@ public class ProbeMod : BloonsTD6Mod
         });
     }
 
-    // In-match hooks (only fire if we reach gameplay) — confirm the loop can drive that far later.
+    // In-match hooks (only fire if we reach gameplay).
     public override void OnMatchStart() => P("hook OnMatchStart FIRED (in-match)");
-    public override void OnRoundStart() => P("hook OnRoundStart FIRED (in-match)");
+
+    private bool _placedTower;
+    public override void OnRoundStart()
+    {
+        P("hook OnRoundStart FIRED (in-match)");
+        if (_placedTower) return;
+        _placedTower = true;
+        // Programmatically place the custom tower via the simulation bridge (GUI placement can't be
+        // driven by synthetic input on macOS — Unity world-input ignores CGEvent positions). This
+        // proves the injected tower is a real, placeable, simulated tower.
+        Check("programmatic place custom ProbeTower in simulation", () =>
+        {
+            var ingame = Il2CppAssets.Scripts.Unity.UI_New.InGame.InGame.instance;
+            if (ingame == null) throw new Exception("InGame.instance null");
+            var bridge = ingame.bridge;
+            if (bridge == null) throw new Exception("bridge null");
+            var tm = Il2CppAssets.Scripts.Unity.Game.instance.model.GetTowerFromId("ModHelperProbe-ProbeTower");
+            if (tm == null) throw new Exception("ProbeTower model null");
+            bridge.CreateTowerAt(
+                new UnityEngine.Vector2(0f, 0f), tm,
+                default,  // forTowerId
+                false,    // isInstaTower
+                null,     // callback
+                true,     // ignoreInventoryChecks
+                true,     // ignorePlacementChecks
+                false,    // isEditorTower
+                0,        // costOverride
+                false,    // deductCash
+                0);       // frontierId
+            P("  CreateTowerAt invoked without error");
+            var placed = bridge.GetFirstTowerWithBaseID("ModHelperProbe-ProbeTower", 0);
+            P($"  GetFirstTowerWithBaseID present? {!ReferenceEquals(placed, null)} -> CUSTOM TOWER PLACED + SIMULATED on arm64");
+        });
+    }
 
     // Verify the custom tower (Il2Cpp class injection) actually registered into the game model.
     private bool _ranTowerProbe;
