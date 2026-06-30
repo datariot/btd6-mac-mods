@@ -119,6 +119,30 @@ public class ProbeMod : BloonsTD6Mod
             P($"  ProbeUpgrade upgrade-models in game model={found}  ids=[{ids.Trim()}]");
             if (found == 0) throw new Exception("ProbeUpgrade not found among game model upgrades");
         });
+        Check("custom ModHero registered in game model (class injection)", () =>
+        {
+            var m = Il2CppAssets.Scripts.Unity.Game.instance.model;
+            int found = 0; string ids = "";
+            foreach (var t in m.towers)
+            {
+                var n = t.name;
+                if (n != null && n.Contains("ProbeHero")) { found++; if (found <= 2) ids += n + " "; }
+            }
+            P($"  ProbeHero tower-models in game model={found}  ids=[{ids.Trim()}]");
+            if (found == 0) throw new Exception("ProbeHero not found among game model towers");
+        });
+        Check("custom ModBloon registered in game model (class injection)", () =>
+        {
+            var m = Il2CppAssets.Scripts.Unity.Game.instance.model;
+            int found = 0; string ids = "";
+            foreach (var b in m.bloons)
+            {
+                var n = b.name;
+                if (n != null && n.Contains("ProbeBloon")) { found++; if (found <= 2) ids += n + " "; }
+            }
+            P($"  ProbeBloon bloon-models in game model={found}  ids=[{ids.Trim()}]");
+            if (found == 0) throw new Exception("ProbeBloon not found among game model bloons");
+        });
     }
 
     // In-match hooks (only fire if we reach gameplay).
@@ -210,4 +234,23 @@ public class ProbeUpgrade : BTD_Mod_Helper.Api.Towers.ModUpgrade<ProbeTower>
     {
         towerModel.range *= 1.5f;
     }
+}
+
+// A custom hero (ModHero, based on Quincy) — tests ModHero Il2Cpp class injection.
+public class ProbeHero : BTD_Mod_Helper.Api.Towers.ModHero
+{
+    public override string BaseTower => "Quincy";
+    public override int Cost => 500;
+    public override float XpRatio => 1f;
+    public override string Title => "The Probe";
+    public override string DisplayName => "Probe Hero";
+    public override string Level1Description => "A test hero injected on the macOS arm64 port.";
+    public override void ModifyBaseTowerModel(Il2CppAssets.Scripts.Models.Towers.TowerModel towerModel) { }
+}
+
+// A custom bloon (ModBloon, based on Red) — tests ModBloon Il2Cpp class injection.
+public class ProbeBloon : BTD_Mod_Helper.Api.Bloons.ModBloon
+{
+    public override string BaseBloon => "Red";
+    public override void ModifyBaseBloonModel(Il2CppAssets.Scripts.Models.Bloons.BloonModel bloonModel) { }
 }

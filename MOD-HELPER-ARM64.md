@@ -14,6 +14,8 @@ Verified autonomously by `src/ModHelperProbe` (a `BloonsTD6Mod` that self-tests 
 | Custom `ModUpgrade<T>` injection | ✅ registers in game model |
 | Custom embedded texture (PNG → Texture2D) | ✅ `GetTexture`/`TextureExists` |
 | Custom sprite reference (`GetSpriteReferenceOrNull`) | ✅ |
+| Custom `ModHero` injection | ✅ registers as `ModHelperProbe-ProbeHero` |
+| Custom `ModBloon` injection | ✅ registers as `ModHelperProbe-ProbeBloon` |
 | No crashes throughout boot/menu/exit | ✅ |
 
 This rests on the detour-layer fixes in the port (near-island short-function fix = Bug A; page-aware
