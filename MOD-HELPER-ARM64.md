@@ -11,6 +11,9 @@ Verified autonomously by `src/ModHelperProbe` (a `BloonsTD6Mod` that self-tests 
 | Interop singletons (`Game.instance`, `.model`), `GetTowerFromId` | ✅ |
 | In-game UI (Mod Helper "MODS (n)" menu button) | ✅ |
 | **Il2Cpp class injection** — custom `ModTower` registers as `ModHelperProbe-ProbeTower` | ✅ |
+| Custom `ModUpgrade<T>` injection | ✅ registers in game model |
+| Custom embedded texture (PNG → Texture2D) | ✅ `GetTexture`/`TextureExists` |
+| Custom sprite reference (`GetSpriteReferenceOrNull`) | ✅ |
 | No crashes throughout boot/menu/exit | ✅ |
 
 This rests on the detour-layer fixes in the port (near-island short-function fix = Bug A; page-aware
@@ -25,3 +28,8 @@ detours, so its success is downstream of those fixes.
 
 ## Reproduce
 `bash test/test-loop.sh` → expects `MOD_HELPER: PASS`.
+
+## Gotcha (recorded)
+`SpriteReference` (and any il2cpp type with custom equality) **NREs on `== null`** — its game-side
+equality dereferences a null field on a fresh instance. Null-check Il2Cpp objects with
+`ReferenceEquals(x, null)` (or `.Pointer == IntPtr.Zero`), never `== null`.

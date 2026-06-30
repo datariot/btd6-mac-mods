@@ -90,6 +90,35 @@ public class ProbeMod : BloonsTD6Mod
             P($"  ProbeTower tower-models in game model={found}  ids=[{ids.Trim()}]");
             if (found == 0) throw new Exception("ProbeTower not found among game model towers");
         });
+        Check("custom embedded texture loads (TextureExists/GetTexture)", () =>
+        {
+            bool exists = BTD_Mod_Helper.Api.ModContent.TextureExists(ModHelper.GetMod<ProbeMod>(), "ProbeIcon");
+            var tex = BTD_Mod_Helper.Api.ModContent.GetTexture(ModHelper.GetMod<ProbeMod>(), "ProbeIcon");
+            P($"  TextureExists={exists}, GetTexture null? {tex == null}, {(tex != null ? $"{tex.width}x{tex.height}" : "")}");
+            if (!exists || tex == null) throw new Exception("embedded ProbeIcon.png did not load");
+        });
+        // NOTE: SpriteReference has a custom il2cpp equality that NREs on `== null`, so null-check
+        // Il2Cpp objects with ReferenceEquals (compares the managed wrapper), never `== null`.
+        var mod = ModHelper.GetMod<ProbeMod>();
+        Check("custom sprite reference resolves (GetSpriteReferenceOrNull)", () =>
+        {
+            var sr = BTD_Mod_Helper.Api.ModContent.GetSpriteReferenceOrNull(mod, "ProbeIcon");
+            bool isNull = ReferenceEquals(sr, null);
+            P($"  spriteRef present? {!isNull}, guidRef='{(isNull ? "" : sr.guidRef)}'");
+            if (isNull) throw new Exception("GetSpriteReferenceOrNull returned managed null for an existing texture");
+        });
+        Check("custom ModUpgrade registered in game model", () =>
+        {
+            var m = Il2CppAssets.Scripts.Unity.Game.instance.model;
+            int found = 0; string ids = "";
+            foreach (var u in m.upgrades)
+            {
+                var n = u.name;
+                if (n != null && n.Contains("ProbeUpgrade")) { found++; if (found <= 2) ids += n + " "; }
+            }
+            P($"  ProbeUpgrade upgrade-models in game model={found}  ids=[{ids.Trim()}]");
+            if (found == 0) throw new Exception("ProbeUpgrade not found among game model upgrades");
+        });
     }
 
     // In-match hooks (only fire if we reach gameplay) — confirm the loop can drive that far later.
@@ -127,9 +156,25 @@ public class ProbeTower : BTD_Mod_Helper.Api.Towers.ModTower
     public override string BaseTower => "DartMonkey";
     public override int Cost => 100;
     public override string DisplayName => "Probe Tower";
+    // use our embedded magenta PNG as the shop icon + portrait (tests the custom-sprite pipeline end to end)
+    public override string Icon => "ProbeIcon";
+    public override string Portrait => "ProbeIcon";
     public override void ModifyBaseTowerModel(Il2CppAssets.Scripts.Models.Towers.TowerModel towerModel)
     {
         // distinguish it from the base dart monkey so a placed copy is observably different
         towerModel.range *= 2f;
+    }
+}
+
+// A custom upgrade on the ProbeTower's top path — tests ModUpgrade<T> Il2Cpp class injection.
+public class ProbeUpgrade : BTD_Mod_Helper.Api.Towers.ModUpgrade<ProbeTower>
+{
+    public override int Path => TOP;
+    public override int Tier => 1;
+    public override int Cost => 500;
+    public override string DisplayName => "Probe Upgrade";
+    public override void ApplyUpgrade(Il2CppAssets.Scripts.Models.Towers.TowerModel towerModel)
+    {
+        towerModel.range *= 1.5f;
     }
 }

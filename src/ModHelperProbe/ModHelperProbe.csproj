@@ -14,6 +14,9 @@
     <Mods>$(GameRoot)/Mods</Mods>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="ProbeIcon.png" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="MelonLoader"><HintPath>$(Net6)/MelonLoader.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Il2CppInterop.Runtime"><HintPath>$(Net6)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Btd6ModHelper"><HintPath>$(Mods)/Btd6ModHelper.dll</HintPath><Private>false</Private></Reference>
