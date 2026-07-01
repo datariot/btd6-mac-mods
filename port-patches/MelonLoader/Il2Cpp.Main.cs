@@ -295,6 +295,19 @@ namespace MelonLoader.Support
 
                 _originalPtr = addr;
 
+                // === DIAGNOSTICS (opt-in) ===
+                // These boot-time arm64 detour probes proved the detour layer correct (trampoline page
+                // prot, patch-site target, and Dobby's prologue relocation all validated byte-exact —
+                // see btd6-community-mod-placement-crash memory). They're log-only and behaviorally
+                // inert, but each does ~1 mach_vm_region call per hook (~250 hooks) and spams the log,
+                // so they're gated behind MELON_DETOUR_DEBUG=1 to keep normal boots clean/fast.
+                if (DetourDebug)
+                {
+                    LogTrampolineProt(_detourFrom, _originalPtr);      // trampoline page protection
+                    ValidatePatchTarget(_detourFrom, _island, _targetPtr); // patched prologue branch target
+                    ValidateTrampolineBody(_detourFrom, _originalPtr, fnLen); // relocated-prologue body
+                }
+
                 if (neighbour != 0 && *(uint*)neighbour != neighbourBefore)
                     MelonLogger.Error(
                         $"[arm64-detour] OVERRUN NOT PREVENTED: hooking {fnLen}B fn @0x{_detourFrom:X} still " +
@@ -344,6 +357,225 @@ namespace MelonLoader.Support
             [DllImport("libSystem.B.dylib", EntryPoint = "sys_icache_invalidate")]
             private static extern void sys_icache_invalidate(nint start, nuint len);
             private const int PROT_READ = 1, PROT_WRITE = 2, PROT_EXEC = 4;
+
+            // === DIAGNOSTIC: Dobby-trampoline page-protection probe ===
+            private static int _trampProbeCount;
+            private static int _trampBodyCount, _trampBodyRelocCount, _trampBodyAnomalyCount;
+            private static int _trampBodyInterestingCount, _trampBodyWrongJumpCount;
+            // Opt-in arm64 detour diagnostics (set MELON_DETOUR_DEBUG=1 to enable the boot-time probes).
+            private static readonly bool DetourDebug =
+                Environment.GetEnvironmentVariable("MELON_DETOUR_DEBUG") == "1";
+            private const int VM_PROT_READ = 1, VM_PROT_WRITE = 2, VM_PROT_EXECUTE = 4;
+            private const int VM_REGION_BASIC_INFO_64 = 9;
+
+            [StructLayout(LayoutKind.Sequential)]
+            private struct VMRegionBasicInfo64
+            {
+                public int protection, max_protection;
+                public uint inheritance;
+                public int shared, reserved;
+                public ulong offset;
+                public int behavior;
+                public ushort user_wired_count;
+            }
+            [DllImport("libSystem.B.dylib", EntryPoint = "task_self_trap")]
+            private static extern uint task_self_trap();
+            [DllImport("libSystem.B.dylib", EntryPoint = "mach_vm_region")]
+            private static extern int mach_vm_region(uint task, ref ulong address, ref ulong size,
+                int flavor, ref VMRegionBasicInfo64 info, ref uint infoCnt, out uint objName);
+
+            private static string ProtStr(int p) =>
+                $"{((p & VM_PROT_READ) != 0 ? "r" : "-")}{((p & VM_PROT_WRITE) != 0 ? "w" : "-")}{((p & VM_PROT_EXECUTE) != 0 ? "x" : "-")}";
+
+            private static void LogTrampolineProt(nint fn, nint tramp)
+            {
+                if (tramp == 0 || tramp == fn) return; // no separate trampoline
+                ulong addr = (ulong)tramp, size = 0; var info = new VMRegionBasicInfo64(); uint cnt = 9;
+                int kr = mach_vm_region(task_self_trap(), ref addr, ref size, VM_REGION_BASIC_INFO_64, ref info, ref cnt, out _);
+                if (kr != 0) return;
+                bool inRegion = (ulong)tramp >= addr && (ulong)tramp < addr + size;
+                bool cleanRx = (info.protection & VM_PROT_EXECUTE) != 0 && (info.protection & VM_PROT_WRITE) == 0;
+                bool anomaly = !inRegion || !cleanRx;
+                _trampProbeCount++;
+                // Baseline confirmed clean r-x; only log anomalies now.
+                if (anomaly)
+                    MelonLogger.Msg($"[tramp-prot] tramp@0x{tramp:X} prot={ProtStr(info.protection)} max={ProtStr(info.max_protection)} " +
+                        $"region=0x{addr:X}+0x{size:X} fn@0x{fn:X}  <-- ANOMALY");
+            }
+
+            // Read the page protection of an arbitrary address.
+            private static (bool ok, int prot, ulong start, ulong size) RegionProt(nint p)
+            {
+                ulong addr = (ulong)p, size = 0; var info = new VMRegionBasicInfo64(); uint cnt = 9;
+                int kr = mach_vm_region(task_self_trap(), ref addr, ref size, VM_REGION_BASIC_INFO_64, ref info, ref cnt, out _);
+                return kr != 0 ? (false, 0, 0, 0) : (true, info.protection, addr, size);
+            }
+
+            // Decode the immediate branch target of the patched prologue Dobby wrote at `fn`.
+            // Handles: ADRP/ADD/BR (12-byte near stub), LDR x16,#8/BR/.quad (16-byte far stub), and B.
+            private static unsafe nint DecodeBranchTarget(nint fn)
+            {
+                if (fn == 0) return 0;
+                uint* p = (uint*)fn;
+                uint i0 = p[0], i1 = p[1], i2 = p[2];
+                // ADRP xN ; ADD xN,xN,#imm ; BR xN
+                if ((i0 & 0x9F000000u) == 0x90000000u && (i1 & 0xFF000000u) == 0x91000000u && (i2 & 0xFFFFFC1Fu) == 0xD61F0000u)
+                {
+                    long immlo = (i0 >> 29) & 0x3;
+                    long immhi = (i0 >> 5) & 0x7FFFF;
+                    long imm = (immhi << 2) | immlo;
+                    if ((imm & (1L << 20)) != 0) imm |= ~((1L << 21) - 1); // sign-extend 21 bits
+                    long page = ((long)fn & ~0xFFFL) + (imm << 12);
+                    long off = (i1 >> 10) & 0xFFF;
+                    if (((i1 >> 22) & 1) != 0) off <<= 12;
+                    return (nint)(page + off);
+                }
+                // LDR xN,#8 ; BR xN ; .quad target   (N is any register, e.g. Dobby uses x17)
+                if ((i0 & 0xFFFFFFE0u) == 0x58000040u && (i1 & 0xFFFFFC1Fu) == 0xD61F0000u
+                    && (i0 & 0x1F) == ((i1 >> 5) & 0x1F))
+                    return (nint)(*(long*)(fn + 8));
+                // B imm26
+                if ((i0 & 0xFC000000u) == 0x14000000u)
+                {
+                    long imm26 = i0 & 0x3FFFFFF;
+                    if ((imm26 & (1L << 25)) != 0) imm26 |= ~((1L << 26) - 1);
+                    return (nint)((long)fn + (imm26 << 2));
+                }
+                return 0;
+            }
+
+            // Validate that the patched prologue branches somewhere mapped + executable, and report
+            // whether it lands at the expected detour (island or managed delegate ptr).
+            private static unsafe void ValidatePatchTarget(nint fn, nint island, nint detour)
+            {
+                nint tgt = DecodeBranchTarget(fn);
+                uint i0 = *(uint*)fn;
+                if (tgt == 0)
+                {
+                    MelonLogger.Msg($"[patch-tgt] fn@0x{fn:X} UNRECOGNIZED prologue i0=0x{i0:X8}  <-- ANOMALY");
+                    return;
+                }
+                var (ok, prot, start, size) = RegionProt(tgt);
+                bool exec = ok && (prot & VM_PROT_EXECUTE) != 0 && (ulong)tgt >= start && (ulong)tgt < start + size;
+                string land = tgt == island ? "island" : tgt == detour ? "detour" : "OTHER";
+                bool anomaly = !exec;
+                if (anomaly || land == "OTHER")
+                    MelonLogger.Msg($"[patch-tgt] fn@0x{fn:X} -> 0x{tgt:X} ({land}) prot={(ok ? ProtStr(prot) : "??")} exec={exec}{(anomaly ? "  <-- ANOMALY (target not executable)" : "")}");
+            }
+
+            // Decode Dobby's call-original trampoline BODY (the relocated original prologue at `tramp`)
+            // and verify every PC-relative instruction Dobby had to rewrite (ADRP/ADR/B/BL/B.cond/
+            // CBZ/CBNZ/TBZ/TBNZ/LDR-literal + the tail jump back to fn+K) resolves to a mapped target
+            // (and, for branches, an executable one). A mis-relocated instruction here is the classic
+            // arm64 Dobby bug: the trampoline looks valid at boot but, when Harmony invokes the
+            // ORIGINAL through it, branches to a wrong/unmapped address -> SIGBUS. This is the one
+            // execution-path defect that static patch-site checks cannot see. Logs the trampoline hex
+            // + decoded targets when the body contains relocations, and flags anomalies.
+            private static unsafe void ValidateTrampolineBody(nint fn, nint tramp, int fnLen)
+            {
+                if (tramp == 0 || tramp == fn) return;
+                uint* p = (uint*)tramp;
+                int relocs = 0, anomalies = 0, interesting = 0, tailOff = -1;
+                long jumpBack = 0;
+                var sb = new System.Text.StringBuilder();
+                // scan up to 16 instrs; stop after an unconditional terminator (B / RET / BR)
+                for (int i = 0; i < 16; i++)
+                {
+                    uint ins = p[i];
+                    nint pc = tramp + i * 4;
+                    nint t = 0; string kind = null; bool isBranch = false;
+                    if ((ins & 0x9F000000u) == 0x90000000u) // ADRP
+                    {
+                        long immlo = (ins >> 29) & 0x3, immhi = (ins >> 5) & 0x7FFFF;
+                        long imm = (immhi << 2) | immlo;
+                        if ((imm & (1L << 20)) != 0) imm |= ~((1L << 21) - 1);
+                        t = (nint)(((long)pc & ~0xFFFL) + (imm << 12)); kind = "ADRP";
+                    }
+                    else if ((ins & 0x9F000000u) == 0x10000000u) // ADR
+                    {
+                        long immlo = (ins >> 29) & 0x3, immhi = (ins >> 5) & 0x7FFFF;
+                        long imm = (immhi << 2) | immlo;
+                        if ((imm & (1L << 20)) != 0) imm |= ~((1L << 21) - 1);
+                        t = (nint)((long)pc + imm); kind = "ADR";
+                    }
+                    else if ((ins & 0xBF000000u) == 0x18000000u) // LDR (literal)
+                    {
+                        long imm19 = (ins >> 5) & 0x7FFFF;
+                        if ((imm19 & (1L << 18)) != 0) imm19 |= ~((1L << 19) - 1);
+                        t = (nint)((long)pc + (imm19 << 2)); kind = "LDRlit";
+                    }
+                    else if ((ins & 0xFC000000u) == 0x14000000u) // B
+                    {
+                        long imm26 = ins & 0x3FFFFFF;
+                        if ((imm26 & (1L << 25)) != 0) imm26 |= ~((1L << 26) - 1);
+                        t = (nint)((long)pc + (imm26 << 2)); kind = "B"; isBranch = true;
+                    }
+                    else if ((ins & 0xFC000000u) == 0x94000000u) // BL
+                    {
+                        long imm26 = ins & 0x3FFFFFF;
+                        if ((imm26 & (1L << 25)) != 0) imm26 |= ~((1L << 26) - 1);
+                        t = (nint)((long)pc + (imm26 << 2)); kind = "BL"; isBranch = true;
+                    }
+                    else if ((ins & 0xFF000010u) == 0x54000000u // B.cond
+                             || (ins & 0x7E000000u) == 0x34000000u) // CBZ/CBNZ
+                    {
+                        long imm19 = (ins >> 5) & 0x7FFFF;
+                        if ((imm19 & (1L << 18)) != 0) imm19 |= ~((1L << 19) - 1);
+                        t = (nint)((long)pc + (imm19 << 2));
+                        kind = (ins & 0x7E000000u) == 0x34000000u ? "CBZ" : "Bcond"; isBranch = true;
+                    }
+                    else if ((ins & 0x7E000000u) == 0x36000000u) // TBZ/TBNZ
+                    {
+                        long imm14 = (ins >> 5) & 0x3FFF;
+                        if ((imm14 & (1L << 13)) != 0) imm14 |= ~((1L << 14) - 1);
+                        t = (nint)((long)pc + (imm14 << 2)); kind = "TBZ"; isBranch = true;
+                    }
+
+                    if (kind != null)
+                    {
+                        relocs++;
+                        var (ok, prot, start, size) = RegionProt(t);
+                        bool mapped = ok && (ulong)t >= start && (ulong)t < start + size;
+                        bool execOk = mapped && (prot & VM_PROT_EXECUTE) != 0;
+                        // LDRlit points at a constant (data), so it need only be mapped, not exec.
+                        bool bad = isBranch ? !execOk : !mapped;
+                        if (bad) anomalies++;
+                        // Is this the canonical Dobby tail jump-back? LDRlit immediately followed by BR.
+                        bool isTail = kind == "LDRlit" && i + 1 < 16 && (p[i + 1] & 0xFFFFFC1Fu) == 0xD61F0000u;
+                        if (isTail) { tailOff = i * 4; if (mapped) jumpBack = *(long*)t; }
+                        else interesting++; // a copied PC-relative prologue instr Dobby had to relocate
+                        sb.Append($" {kind}@+{i * 4}->0x{t:X}{(bad ? (isBranch ? "[!exec]" : "[!map]") : "")}");
+                    }
+
+                    // terminators: unconditional B, RET, BR  => end of trampoline body
+                    if ((ins & 0xFC000000u) == 0x14000000u) break;            // B
+                    if ((ins & 0xFFFFFC1Fu) == 0xD65F0000u) break;            // RET
+                    if ((ins & 0xFFFFFC1Fu) == 0xD61F0000u) break;            // BR
+                }
+                _trampBodyCount++;
+                if (relocs == 0) return; // plain prologue copied verbatim — nothing Dobby had to fix
+                _trampBodyRelocCount++;
+                if (anomalies > 0) _trampBodyAnomalyCount++;
+                // The canonical-clean trampoline = N plain copied instrs + tail LDRlit/BR jumping to
+                // exactly fn+tailOff. Flag (a) any copied PC-relative instr Dobby had to relocate
+                // ("interesting"), (b) a jump-back that ISN'T fn+tailOff (Dobby got the resume point
+                // wrong). These are the only ways the body could be silently-wrong-but-mapped.
+                bool wrongJump = tailOff >= 0 && jumpBack != (long)fn + tailOff;
+                if (interesting > 0) _trampBodyInterestingCount++;
+                if (wrongJump) _trampBodyWrongJumpCount++;
+                // hex of first 32 bytes for inspection
+                var hex = new System.Text.StringBuilder();
+                for (int i = 0; i < 8; i++) hex.Append($"{p[i]:X8} ");
+                bool notable = anomalies > 0 || interesting > 0 || wrongJump;
+                if (notable || _trampBodyRelocCount <= 12) // ALL notable trampolines + a sample of clean ones
+                    MelonLogger.Msg($"[tramp-body] fn@0x{fn:X} tramp@0x{tramp:X} fnLen={fnLen} relocs={relocs} interesting={interesting} " +
+                        $"jumpBack=0x{jumpBack:X} expect=0x{(tailOff >= 0 ? (long)fn + tailOff : 0):X} anomalies={anomalies}" +
+                        $"{(notable ? (wrongJump ? "  <-- WRONG-JUMPBACK" : interesting > 0 ? "  <-- HAS-RELOC" : "  <-- ANOMALY") : "")} |{sb}  hex={hex.ToString().Trim()}");
+                if (_trampBodyCount % 50 == 0)
+                    MelonLogger.Msg($"[tramp-body-summary] bodies={_trampBodyCount} relocTrampolines={_trampBodyRelocCount} " +
+                        $"withReloc={_trampBodyInterestingCount} wrongJumpBacks={_trampBodyWrongJumpCount} anomalies={_trampBodyAnomalyCount}");
+            }
+
             private const int MAP_PRIVATE = 0x0002, MAP_ANON = 0x1000;
 
             // Length in bytes of the arm64 function at `start`, by scanning for the terminating

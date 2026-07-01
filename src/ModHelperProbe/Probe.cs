@@ -154,32 +154,36 @@ public class ProbeMod : BloonsTD6Mod
         P("hook OnRoundStart FIRED (in-match)");
         if (_placedTower) return;
         _placedTower = true;
-        // Programmatically place the custom tower via the simulation bridge (GUI placement can't be
-        // driven by synthetic input on macOS — Unity world-input ignores CGEvent positions). This
-        // proves the injected tower is a real, placeable, simulated tower.
-        Check("programmatic place custom ProbeTower in simulation", () =>
+        // === [REPRO] community-mod placement-crash harness ===
+        // Place a STOCK DartMonkey via the simulation bridge — this drives TowerManager.CreateTower,
+        // the method TimeMachine (and other community mods) Harmony-patches. Faithful to Hugh's
+        // scenario (he placed a normal tower). GUI placement can't be driven by synthetic input on
+        // macOS (Unity world-input ignores CGEvent positions), so we go through the bridge. Each
+        // step is bracketed with [REPRO] so a crash pinpoints exactly which call faulted.
+        MelonLogger.Msg("[REPRO] OnRoundStart reached — about to force a stock DartMonkey via CreateTower");
+        try
         {
             var ingame = Il2CppAssets.Scripts.Unity.UI_New.InGame.InGame.instance;
-            if (ingame == null) throw new Exception("InGame.instance null");
+            if (ingame == null) { MelonLogger.Msg("[REPRO] InGame.instance null — abort"); return; }
             var bridge = ingame.bridge;
-            if (bridge == null) throw new Exception("bridge null");
-            var tm = Il2CppAssets.Scripts.Unity.Game.instance.model.GetTowerFromId("ModHelperProbe-ProbeTower");
-            if (tm == null) throw new Exception("ProbeTower model null");
+            if (bridge == null) { MelonLogger.Msg("[REPRO] bridge null — abort"); return; }
+            var dart = Il2CppAssets.Scripts.Unity.Game.instance.model.GetTowerFromId("DartMonkey");
+            if (dart == null) { MelonLogger.Msg("[REPRO] DartMonkey model null — abort"); return; }
+            MelonLogger.Msg("[REPRO] calling bridge.CreateTowerAt(DartMonkey, ignorePlacementChecks=true) ...");
             bridge.CreateTowerAt(
-                new UnityEngine.Vector2(0f, 0f), tm,
-                default,  // forTowerId
-                false,    // isInstaTower
-                null,     // callback
-                true,     // ignoreInventoryChecks
-                true,     // ignorePlacementChecks
-                false,    // isEditorTower
-                0,        // costOverride
-                false,    // deductCash
-                0);       // frontierId
-            P("  CreateTowerAt invoked without error");
-            var placed = bridge.GetFirstTowerWithBaseID("ModHelperProbe-ProbeTower", 0);
-            P($"  GetFirstTowerWithBaseID present? {!ReferenceEquals(placed, null)} -> CUSTOM TOWER PLACED + SIMULATED on arm64");
-        });
+                new UnityEngine.Vector2(0f, 0f), dart,
+                default, false, null,
+                true,   // ignoreInventoryChecks
+                true,   // ignorePlacementChecks
+                false, 0, false, 0);
+            MelonLogger.Msg("[REPRO] CreateTowerAt RETURNED — NO CRASH on stock-tower placement");
+            var placed = bridge.GetFirstTowerWithBaseID("DartMonkey", 0);
+            MelonLogger.Msg($"[REPRO] DartMonkey present after placement? {!ReferenceEquals(placed, null)}");
+        }
+        catch (Exception e)
+        {
+            MelonLogger.Msg($"[REPRO] managed exception (NOT a native crash): {e.GetType().Name}: {e.Message}");
+        }
     }
 
     // Verify the custom tower (Il2Cpp class injection) actually registered into the game model.
