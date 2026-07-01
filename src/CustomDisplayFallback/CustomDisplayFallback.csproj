@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    CustomDisplayFallback — macOS-port hardening for Mod Helper "ModCustomDisplay" mods.
+
+    A ModCustomDisplay (e.g. StarshipEnterprise's ship hulls) loads its 3D mesh from an
+    embedded Unity AssetBundle. Those bundles are compiled for StandaloneWindows; the
+    macOS/Metal player cannot load a cross-platform bundle, so Mod Helper's
+    ICustomDisplayExt.GetBasePrototype gets a null/broken prefab and the game later SIGBUSes
+    when it tries to resolve the (never-registered) display Addressable
+    (e.g. "StarshipEnterprise-StarfleetBase").
+
+    This mod Harmony-patches ModCustomDisplay.GetBasePrototype so that, instead of loading the
+    Windows bundle mesh, it falls back to a STOCK in-game display (same code path the base
+    ModDisplay uses for its BaseDisplay GUID). The custom 3D model is lost, but the tower is
+    placeable and does not crash — degrading gracefully instead of killing the game.
+
+    Builds AnyCPU (PE32) — no <PlatformTarget>; an x64 build won't load on the port.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>CustomDisplayFallback</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameRoot Condition="'$(GameRoot)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/BloonsTD6</GameRoot>
+    <Net6>$(GameRoot)/MelonLoader/net6</Net6>
+    <Interop>$(GameRoot)/MelonLoader/Il2CppAssemblies</Interop>
+    <Mods>$(GameRoot)/Mods</Mods>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(Net6)/MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(Net6)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(Net6)/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Interop)/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem.Core"><HintPath>$(Interop)/Il2CppSystem.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Interop)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Interop)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppNinjaKiwi.Common"><HintPath>$(Interop)/Il2CppNinjaKiwi.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Btd6ModHelper"><HintPath>$(Mods)/Btd6ModHelper.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+</Project>
