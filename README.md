@@ -229,6 +229,10 @@ All are **bare MelonMods** (no Mod Helper, no class injection): they call the ga
 > Most are persistent / account-level cheats (Monkey Money, trophies, ranks, unlocks are server-synced).
 > These are for messing around on your own account — don't use them where a modded balance would matter.
 
+> 📋 **Thinking of adding a public mod or writing your own?** Read
+> **[MODDING-LIMITATIONS.md](MODDING-LIMITATIONS.md)** first — logic/2D mods work great, but mods that
+> ship custom **3D models** (Unity AssetBundles) can't run on this port. It explains why and how to vet a mod.
+
 ---
 
 ## Part D: Reading the result
